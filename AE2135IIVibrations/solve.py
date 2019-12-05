@@ -19,7 +19,7 @@ class InitialValueConstants():
     def initialConstants(self, input,):
         inBetween = np.array(input)
         if len(inBetween) != 2:
-            raise ValueError("The solutionSpecifics should be a tuple containing constants, with lenght 2. For imaginary conjugates.")
+            raise ValueError("The solutionSpecifics should be a tuple containing constants, with lenght 2.")
         else:
             self.__initialConstants = inBetween
 
@@ -48,7 +48,9 @@ class ImaginaryConjugates(InitialValueConstants):
             
     # Thé funtion that returns the actuals curves and bodies... <3
     def solveAtTime(self, t):
-        return mt.exp(real * t) * np.dot(self.initialConstants, np.array([mt.sin(t), mt.cos(t)] ))    
+        if self.initialConstants[0] == None:
+            raise ValueError("The initial values have not yet been calculated.")
+        return mt.exp(self.real * t) * np.dot(self.initialConstants, np.array([mt.sin(t), mt.cos(t)] ))    
 
     # Solve the initial situation, if there is no time t1 is given, time t0 will be used.
     def initialSolve(self, x0, t0, v1, t1= None,):
@@ -61,7 +63,78 @@ class ImaginaryConjugates(InitialValueConstants):
                       [self.real * mt.sin(t1) + mt.cos(t1), self.real * mt.cos(t1) - mt.sin(t1)]])
         y = np.array( [x0*mt.exp(-self.real*t0), v1*mt.exp(-self.real*t1)])
         self.initialConstants = np.linalg.lstsq(A, y, rcond=None)
-     
+
+
+class RealEqual(InitialValueConstants):
+    def __init__(self, real = None, alternative = None):
+        # Two alternative ways to supply the information. One logical, one useful in the homogeneous class.
+        self.real = real
+
+        # Check whether the are actually filled in.
+        if real == None:
+            if alternative == None:
+                raise UnboundLocalError("At least provide either the real solution, or fill in the alternative. For real but equal roots.")
+            else:
+                self.real = alternative[0]
+        
+        # Import the functions pertaining the initial constants.
+        super().__init__()
+
+    def solveAtTime(self, t):
+        if self.initialConstants[0] == None:
+            raise ValueError("The initial values have not yet been calculated.")
+        return np.dot(np.array([mt.exp(self.real * t), t * mt.exp(self.real * t)]), self.initialConstants)
+
+    def initialSolve(self, x0, t0, v1, t1 = None):
+        if t1 == None:
+            t1 = t0
+
+        if self.initialConstants != np.array([None, None]):
+            raise PermissionError("There is already an initial problem specified.")
+
+        A = np.array([[mt.exp(self.real * t0), t0 * mt.exp(self.real * t0)],
+                      [self.real * mt.exp(self.real * t1), (self.real * t1 + 1) * mt.exp(self.real * t1)]])
+        y = np.array([x0, v1])
+        self.initialConstants = np.linalg.lstsq(A, y, rcond=None)        
+
+
+class RealDifferent(InitialValueConstants):
+    def __init__(self, real1 = None, real2 = None, alternative = None):
+        # Provide two ways to activate this class. The logical way and the useful way for the homogeneous class.
+        self.real1 = real1
+        self.real2 = real2
+
+        if real1 == None or real2 == None:
+            if alternative == None:
+                raise UnboundLocalError("At least provide either the two real roots, or fill in the alternative. For real but different roots.")
+            else:
+                self.real1, self.real2, _, _ = alternative
+
+        # Import the functions pertaining the initial constants:
+        super().__init__()
+
+    def solveAtTime(self, t):
+        if self.initialConstants[0] == None:
+            raise ValueError("The initial values have not yet been calculated.")
+        return np.dot(self.initialConstants, np.array([mt.exp(self.real1 * t), mt.exp(self.real2 * t)]))
+
+    def initialSolve(self, x0, t0, v1, t1 = None):
+        if t1 == None:
+            t1 = t0
+
+        if self.initialConstants != np.array([None, None]):
+            raise PermissionError("There is already an initial problem specified.")
+
+        A = np.array([[mt.exp(self.real1 * t0), mt.exp(self.real2 * t0)],
+                      [self.real1 * mt.exp(self.real1* t1), self.real2 * mt.exp(self.real2 * t1)] ])
+        y = np.array([x0, v1])
+        self.initialConstants = np.linalg.lstsq(A, y, rcond=None)
+
+
+class Massless():
+    def __init__(self, *args, **kwargs):
+        raise ValueError("The mass of the system cannot be zero...")
+
 
 class Homogeneous():
     def __init__(self, m, c, k, *args, **kwargs):
@@ -115,7 +188,7 @@ class Homogeneous():
 
     def SolutionclassWithEigenvalues(self,):
         # Creates the classes and assigns the right values to them
-        return {0: ImaginaryConjugates, 1: x, 2: x, 3: x,}
+        return {0: ImaginaryConjugates, 1: RealEqual, 2: x, 3: Massless,}
     
 
     def homogeneousSolution(self, t,):
