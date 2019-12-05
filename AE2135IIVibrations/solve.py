@@ -11,6 +11,11 @@ class InitialValueConstants():
         # A class specifically pertaining the constants to solve the initial value problems
         self.__initialConstants = np.array((None, None))
         
+    def checkIfNoneInitialValues(self,):
+        if self.__initialConstants[0] == None or self.__initialConstants[1] == None:
+            return True
+        return False
+
     @property
     def initialConstants(self,):
         return self.__initialConstants
@@ -48,7 +53,7 @@ class ImaginaryConjugates(InitialValueConstants):
             
     # Thé funtion that returns the actuals curves and bodies... <3
     def solveAtTime(self, t):
-        if self.initialConstants[0] == None:
+        if self.checkIfNoneInitialValues():
             raise ValueError("The initial values have not yet been calculated.")
         return mt.exp(self.real * t) * np.dot(self.initialConstants, np.array([mt.sin(t), mt.cos(t)] ))    
 
@@ -56,13 +61,13 @@ class ImaginaryConjugates(InitialValueConstants):
     def initialSolve(self, x0, t0, v1, t1= None,):
         if t1 == None:
             t1= t0
-        if self.initialConstants != np.array([None, None]):
+        if not self.checkIfNoneInitialValues():
             raise PermissionError("There is already an initial problem specified.")
         
-        A = np.array([[mt.sin(t0), mt.cos(t0)]
+        A = np.array([[mt.sin(t0), mt.cos(t0)],
                       [self.real * mt.sin(t1) + mt.cos(t1), self.real * mt.cos(t1) - mt.sin(t1)]])
         y = np.array( [x0*mt.exp(-self.real*t0), v1*mt.exp(-self.real*t1)])
-        self.initialConstants = np.linalg.lstsq(A, y, rcond=None)
+        self.initialConstants = np.linalg.lstsq(A, y, rcond=None)[0]
 
 
 class RealEqual(InitialValueConstants):
@@ -81,7 +86,7 @@ class RealEqual(InitialValueConstants):
         super().__init__()
 
     def solveAtTime(self, t):
-        if self.initialConstants[0] == None:
+        if self.checkIfNoneInitialValues():
             raise ValueError("The initial values have not yet been calculated.")
         return np.dot(np.array([mt.exp(self.real * t), t * mt.exp(self.real * t)]), self.initialConstants)
 
@@ -89,13 +94,13 @@ class RealEqual(InitialValueConstants):
         if t1 == None:
             t1 = t0
 
-        if self.initialConstants != np.array([None, None]):
+        if not self.checkIfNoneInitialValues():
             raise PermissionError("There is already an initial problem specified.")
 
         A = np.array([[mt.exp(self.real * t0), t0 * mt.exp(self.real * t0)],
                       [self.real * mt.exp(self.real * t1), (self.real * t1 + 1) * mt.exp(self.real * t1)]])
         y = np.array([x0, v1])
-        self.initialConstants = np.linalg.lstsq(A, y, rcond=None)        
+        self.initialConstants = np.linalg.lstsq(A, y, rcond=None)[0]        
 
 
 class RealDifferent(InitialValueConstants):
@@ -114,7 +119,7 @@ class RealDifferent(InitialValueConstants):
         super().__init__()
 
     def solveAtTime(self, t):
-        if self.initialConstants[0] == None:
+        if self.checkIfNoneInitialValues():
             raise ValueError("The initial values have not yet been calculated.")
         return np.dot(self.initialConstants, np.array([mt.exp(self.real1 * t), mt.exp(self.real2 * t)]))
 
@@ -122,13 +127,13 @@ class RealDifferent(InitialValueConstants):
         if t1 == None:
             t1 = t0
 
-        if self.initialConstants != np.array([None, None]):
+        if not self.checkIfNoneInitialValues():
             raise PermissionError("There is already an initial problem specified.")
 
         A = np.array([[mt.exp(self.real1 * t0), mt.exp(self.real2 * t0)],
                       [self.real1 * mt.exp(self.real1* t1), self.real2 * mt.exp(self.real2 * t1)] ])
         y = np.array([x0, v1])
-        self.initialConstants = np.linalg.lstsq(A, y, rcond=None)
+        self.initialConstants = np.linalg.lstsq(A, y, rcond=None)[0]
 
 
 class Massless():
@@ -188,7 +193,7 @@ class Homogeneous():
 
     def SolutionclassWithEigenvalues(self,):
         # Creates the classes and assigns the right values to them
-        return {0: ImaginaryConjugates, 1: RealEqual, 2: x, 3: Massless,}
+        return {0: ImaginaryConjugates, 1: RealEqual, 2: RealDifferent, 3: Massless,}
     
 
     def homogeneousSolution(self, t,):
@@ -199,7 +204,7 @@ class Homogeneous():
         self.characteristicEquation()
 
 
-    def reset(self,):
+    def homogeneousReset(self,):
         # Resets the specific solutionClass, als m, c or k has changed.
         self.solveTheHomogeneousEquation()
 
@@ -223,7 +228,7 @@ class Homogeneous():
     @m.setter
     def m(self, m):
         self.__m = m
-        self.reset()
+        self.homogeneousReset()
 
     @property
     def c(self,):
@@ -232,7 +237,7 @@ class Homogeneous():
     @c.setter
     def c(self, c):
         self.__c = c
-        self.reset()
+        self.homogeneousReset()
 
     @property
     def k(self,):
@@ -241,7 +246,7 @@ class Homogeneous():
     @c.setter
     def k(self, k):
         self.__k = k
-        self.reset()
+        self.homogeneousReset()
 
 
     
@@ -254,5 +259,11 @@ class Solution(Homogeneous, Particular):
     def __init__(self, m, c, k):
         super().__init__(m=m, c=c, k=k)
 
-    def solve():
-        pass
+    def solve(self, t):
+        return self.homogeneousSolution(t)
+
+    def initialValueProblem(self, x0, t0, v1, t1 = None):
+        if t1 == None:
+            t1 = t0
+
+        self.homogeneousSolutionInstance.initialSolve(x0, t0, v1, t1)
