@@ -1,6 +1,6 @@
-# VibrationAnalysisAE
-A package packing the necessary functions to perform an analysis on second order differential equations 
-portraying a mass-spring-dashpot system.
+# AE2135-II Vibrations
+A package packing the necessary functions to perform an analysis by simulation on second order differential
+equations portraying a mass-spring-dashpot system.
 
 The extra functions include:
 - Plot said system in a comprehensive manner.
